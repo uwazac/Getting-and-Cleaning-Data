@@ -1,18 +1,36 @@
-# trainData<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/X_train.txt")
-# testData<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/X_test.txt")
-# yTrain<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/y_train.txt")
-# yTest<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/y_test.txt")
-# trainSubjects<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/subject_train.txt")
-# testSubjects<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/subject_test.txt")
-# interimData<-rbind(trainData, testData)
-# charfeatures<-as.character(features[,2])
-# colnames(interimData)<-charfeatures
-# trainTestDesc<-rbind(yTrain, yTest)
-# mergedData<-cbind(trainTestDesc, interimData)
-# colnames(mergedData)[[1]]<-"Activities"
-# subJects<-rbind(trainSubjects, testSubjects)
-# mergedData<-cbind(subJects, mergedData)
-# colnames(mergedData)[1]<-"Subjects"
+#load the appropriate library
+library(dplyr)
+
+# read in data from files
+trainData<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/X_train.txt")
+testData<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/X_test.txt")
+yTrain<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/y_train.txt")
+yTest<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/y_test.txt")
+trainSubjects<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/train/subject_train.txt")
+testSubjects<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/test/subject_test.txt")
+features<-read.table("/Users/geoffreystephens/uwazac/Getting and Cleaning Data/UCI HAR Dataset/features.txt", stringsAsFactors=FALSE)
+
+#assemble the data
+interimData<-bind_rows(trainData, testData)
+new_features<-valid_column_names<-make.names(features$V2, unique=TRUE, allow_=TRUE)
+colnames(interimData)<-new_features
+
+trainTestDesc<-bind_rows(yTrain, yTest)
+trainTestDesc<-mutate(trainTestDesc, Activities = V1)
+trainTestDesc<-select(trainTestDesc, Activities)
+
+mergedData<-bind_cols(trainTestDesc, interimData)
+
+subJects<-bind_rows(trainSubjects, testSubjects)
+subJects<-mutate(subJects, Subjects = V1)
+subJects<-select(subJects, Subjects)
+
+mergedData<-bind_cols(subJects, mergedData)
+
+#Select the relevant variables
+meanData<-select(mergedData, contains("mean"))
+
+#Relabel (tidy the table) for easier viewing
 labelSub<-function(mergedData1){
   for (i in 1:dim(mergedData1)[1])
     {
@@ -31,11 +49,9 @@ labelSub<-function(mergedData1){
     }
 return(mergedData1)
 }
-tidyData<-group_by(mergedData, Subjects, Activities)
-tidyColNamer<-function(){
-  
-  funTime<-summarise(tidyData, count = n(), mean(tidyData$"tBodyAcc-mean()-Z", na.rm=TRUE))
-  
-return(funTime)
-}
 
+#Run the function above to relabel the rows
+meanData<-labelSub(meanData)
+
+#Group the variables accordingly
+meanData<-group_by(meanData, Subjects, Activities)
